@@ -26,6 +26,7 @@ export default function AppSidebar({ userRole, userType, activeSection, onSectio
   const role = userRole || userType;
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const { signOut, firstName, lastName, profile } = useAuth();
 
   useEffect(() => {
     const checkScreenSize = () => {
@@ -67,8 +68,6 @@ export default function AppSidebar({ userRole, userType, activeSection, onSectio
 
   const navigationItems = role === "job_seeker" ? jobSeekerItems : employerItems;
 
-  const { signOut } = useAuth();
-
   const handleSignOut = async () => {
     await signOut();
   };
@@ -76,6 +75,13 @@ export default function AppSidebar({ userRole, userType, activeSection, onSectio
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
   };
+
+  // Display name logic - use first and last name if available, otherwise fallback
+  const displayName = firstName && lastName 
+    ? `${firstName} ${lastName}` 
+    : (firstName || profile?.full_name || 'User');
+
+  const displayFirstName = firstName || profile?.full_name?.split(' ')[0] || 'User';
 
   return (
     <>
@@ -131,7 +137,9 @@ export default function AppSidebar({ userRole, userType, activeSection, onSectio
 
         {/* Welcome Message */}
         <div className="px-6 py-4 bg-gradient-to-r from-primary/5 to-accent/5 border-b border-gray-50">
-          <h2 className="text-sm font-medium text-gray-900">Welcome back!</h2>
+          <h2 className="text-sm font-medium text-gray-900">
+            Welcome back, {displayFirstName}!
+          </h2>
           <p className="text-xs text-gray-600 mt-1">
             {role === "job_seeker" 
               ? "Find your dream career opportunity" 
@@ -178,10 +186,20 @@ export default function AppSidebar({ userRole, userType, activeSection, onSectio
         <div className="border-t border-gray-100 p-4">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-gradient-to-r from-primary to-accent rounded-full flex items-center justify-center">
-              <User className="w-5 h-5 text-white" />
+              {profile?.profile_photo_url ? (
+                <img 
+                  src={profile.profile_photo_url} 
+                  alt="Profile" 
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+              ) : (
+                <span className="text-white font-bold text-sm">
+                  {displayFirstName.charAt(0)}
+                </span>
+              )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">User Profile</p>
+              <p className="text-sm font-medium text-gray-900 truncate">{displayName}</p>
               <p className="text-xs text-gray-500 capitalize">
                 {role?.replace('_', ' ') || 'User'}
               </p>

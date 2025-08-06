@@ -10,6 +10,20 @@ interface Profile {
   role: UserRole;
   full_name: string;
   company_name?: string;
+  phone?: string;
+  city?: string;
+  country?: string;
+  bio?: string;
+  current_title?: string;
+  experience?: string;
+  current_company?: string;
+  expected_salary?: string;
+  degree?: string;
+  major?: string;
+  school?: string;
+  graduation_year?: string;
+  skills?: string[];
+  profile_photo_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -19,6 +33,8 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
+  firstName: string;
+  lastName: string;
   signUp: (email: string, password: string, fullName: string, role: UserRole, companyName?: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -33,6 +49,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Derive first and last names from profile
+  const firstName = profile?.full_name?.split(' ')[0] || '';
+  const lastName = profile?.full_name?.split(' ').slice(1).join(' ') || '';
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -67,6 +87,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Set up real-time subscription for profile updates
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('profile-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'profiles',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('Profile updated:', payload);
+          if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
+            const updatedProfile = payload.new as Profile;
+            setProfile({
+              ...updatedProfile,
+              role: updatedProfile.role as UserRole
+            });
+          } else if (payload.eventType === 'DELETE') {
+            setProfile(null);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -156,6 +210,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     profile,
     loading,
+    firstName,
+    lastName,
     signUp,
     signIn,
     signOut,

@@ -60,30 +60,33 @@ const ProfileSettings: React.FC = () => {
 
   const availableSkills = [
     "Vue.js", "Angular", "Kubernetes", "Redis", "Elasticsearch",
-    "Go", "Rust", "Java", "Spring Boot", "Django"
+    "Go", "Rust", "Java", "Spring Boot", "Django", "React", "Node.js",
+    "Python", "JavaScript", "TypeScript", "Docker", "AWS", "MongoDB"
   ];
 
   // Load user data on component mount
   useEffect(() => {
     if (profile && user) {
-      const nameParts = profile.full_name.split(' ');
+      const nameParts = profile.full_name?.split(' ') || [];
       setFormData({
         firstName: nameParts[0] || '',
         lastName: nameParts.slice(1).join(' ') || '',
         email: user.email || '',
-        phone: '',
-        city: '',
-        country: '',
-        bio: '',
-        currentTitle: '',
-        experience: '',
-        currentCompany: '',
-        expectedSalary: '',
-        degree: '',
-        major: '',
-        school: '',
-        graduationYear: ''
+        phone: profile.phone || '',
+        city: profile.city || '',
+        country: profile.country || '',
+        bio: profile.bio || '',
+        currentTitle: profile.current_title || '',
+        experience: profile.experience || '',
+        currentCompany: profile.current_company || '',
+        expectedSalary: profile.expected_salary || '',
+        degree: profile.degree || '',
+        major: profile.major || '',
+        school: profile.school || '',
+        graduationYear: profile.graduation_year || ''
       });
+
+      setSkills(profile.skills || []);
     }
   }, [profile, user]);
 
@@ -103,15 +106,28 @@ const ProfileSettings: React.FC = () => {
   };
 
   const handleSave = async () => {
-    if (!user) return;
+    if (!user || !profile) return;
 
     setIsSaving(true);
     try {
-      // Update profile
+      // Update profile with all the new data
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
           full_name: `${formData.firstName} ${formData.lastName}`.trim(),
+          phone: formData.phone,
+          city: formData.city,
+          country: formData.country,
+          bio: formData.bio,
+          current_title: formData.currentTitle,
+          experience: formData.experience,
+          current_company: formData.currentCompany,
+          expected_salary: formData.expectedSalary,
+          degree: formData.degree,
+          major: formData.major,
+          school: formData.school,
+          graduation_year: formData.graduationYear,
+          skills: skills,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', user.id);
@@ -120,7 +136,7 @@ const ProfileSettings: React.FC = () => {
 
       toast({
         title: 'Success',
-        description: 'Profile updated successfully!',
+        description: 'Profile updated successfully! Changes will be reflected immediately.',
       });
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -172,7 +188,15 @@ const ProfileSettings: React.FC = () => {
               {/* Profile Photo */}
               <div className="flex items-center gap-6">
                 <div className="w-20 h-20 bg-gradient-hero rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                  {profile?.full_name?.charAt(0) || 'U'}
+                  {profile?.profile_photo_url ? (
+                    <img 
+                      src={profile.profile_photo_url} 
+                      alt="Profile" 
+                      className="w-20 h-20 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span>{formData.firstName?.charAt(0) || profile?.full_name?.charAt(0) || 'U'}</span>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Button variant="outline" size="sm">
@@ -212,7 +236,8 @@ const ProfileSettings: React.FC = () => {
                     id="email" 
                     type="email" 
                     value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    disabled
+                    className="bg-gray-50"
                     placeholder="Enter email address"
                   />
                 </div>

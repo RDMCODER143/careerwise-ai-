@@ -261,29 +261,71 @@ export type Database = {
       }
       profiles: {
         Row: {
+          bio: string | null
+          city: string | null
           company_name: string | null
+          country: string | null
           created_at: string
+          current_company: string | null
+          current_title: string | null
+          degree: string | null
+          expected_salary: string | null
+          experience: string | null
           full_name: string
+          graduation_year: string | null
           id: string
+          major: string | null
+          phone: string | null
+          profile_photo_url: string | null
           role: string
+          school: string | null
+          skills: string[] | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          bio?: string | null
+          city?: string | null
           company_name?: string | null
+          country?: string | null
           created_at?: string
+          current_company?: string | null
+          current_title?: string | null
+          degree?: string | null
+          expected_salary?: string | null
+          experience?: string | null
           full_name: string
+          graduation_year?: string | null
           id?: string
+          major?: string | null
+          phone?: string | null
+          profile_photo_url?: string | null
           role: string
+          school?: string | null
+          skills?: string[] | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          bio?: string | null
+          city?: string | null
           company_name?: string | null
+          country?: string | null
           created_at?: string
+          current_company?: string | null
+          current_title?: string | null
+          degree?: string | null
+          expected_salary?: string | null
+          experience?: string | null
           full_name?: string
+          graduation_year?: string | null
           id?: string
+          major?: string | null
+          phone?: string | null
+          profile_photo_url?: string | null
           role?: string
+          school?: string | null
+          skills?: string[] | null
           updated_at?: string
           user_id?: string
         }
