@@ -85,6 +85,7 @@ const JobPostings = () => {
     try {
       const webhookData = {
         job_posting_id: job.id,
+        job_posting_title: job.title,
         title: job.title,
         department: job.department,
         location: job.location,
@@ -93,8 +94,8 @@ const JobPostings = () => {
         job_type: job.job_type,
         status: job.status,
         description: job.description,
-        requirements: job.requirements,
-        benefits: job.benefits,
+        requirements: job.requirements || [],
+        benefits: job.benefits || [],
         expires_at: job.expires_at,
         created_at: job.created_at,
         candidates: getJobCandidates(job.id).map(candidate => ({
@@ -107,31 +108,43 @@ const JobPostings = () => {
           skills: candidate.skills,
           experience_years: candidate.experience_years
         })),
+        total_candidates: getJobCandidates(job.id).length,
         timestamp: new Date().toISOString()
       };
+
+      console.log('Sending bulk analysis data:', webhookData);
 
       const response = await fetch('https://prakashgdg.app.n8n.cloud/webhook/20dccbac-63aa-4b2a-b94e-d4d6194f9a77', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify(webhookData),
+        mode: 'cors',
       });
 
+      console.log('Webhook response status:', response.status);
+      
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Webhook error response:', errorText);
         throw new Error(`Webhook failed: ${response.status} ${response.statusText}`);
       }
 
+      const responseData = await response.text();
+      console.log('Webhook response:', responseData);
+
       toast({
         title: "Analysis Started",
-        description: `Bulk analysis initiated for "${job.title}". You'll receive results shortly.`,
+        description: `Bulk analysis initiated for "${job.title}" (ID: ${job.id}). Processing ${getJobCandidates(job.id).length} candidates.`,
       });
 
     } catch (error) {
       console.error('Bulk analysis error:', error);
       toast({
         title: "Analysis Failed",
-        description: "Failed to start bulk analysis. Please try again.",
+        description: `Failed to start bulk analysis for "${job.title}". Please check your connection and try again.`,
         variant: "destructive",
       });
     } finally {
@@ -314,6 +327,7 @@ const JobPostings = () => {
                         variant="outline"
                         onClick={() => handleBulkAnalysis(job)}
                         disabled={analyzingJobs.has(job.id)}
+                        className="min-w-[140px]"
                       >
                         <BarChart3 className="w-4 h-4 mr-2" />
                         {analyzingJobs.has(job.id) ? 'Analyzing...' : 'Bulk Analysis'}
