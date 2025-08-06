@@ -1,4 +1,3 @@
-
 import AppSidebar from "@/components/AppSidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,8 @@ import {
   Users,
   MapPin,
   IndianRupee,
-  Calendar
+  Calendar,
+  BarChart3
 } from "lucide-react";
 import { useJobPostings, JobPosting } from "@/hooks/useJobPostings";
 import { useCandidates } from "@/hooks/useCandidates";
@@ -20,6 +20,7 @@ import { CreateJobDialog } from "@/components/CreateJobDialog";
 import { EditJobDialog } from "@/components/EditJobDialog";
 import { ScheduleInterviewDialog } from "@/components/ScheduleInterviewDialog";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const JobPostings = () => {
   const { jobPostings, isLoading, deleteJobPosting } = useJobPostings();
@@ -31,6 +32,8 @@ const JobPostings = () => {
     jobPostingId: string;
     candidateName: string;
   } | null>(null);
+  const [analyzingJobs, setAnalyzingJobs] = useState<Set<string>>(new Set());
+  const { toast } = useToast();
 
   // Calculate stats
   const activeJobs = jobPostings.filter(job => job.status === 'Active').length;
@@ -74,6 +77,70 @@ const JobPostings = () => {
     
     if (diffInDays <= 0) return 'Expired';
     return `${diffInDays} days left`;
+  };
+
+  const handleBulkAnalysis = async (job: JobPosting) => {
+    setAnalyzingJobs(prev => new Set(prev).add(job.id));
+    
+    try {
+      const webhookData = {
+        job_posting_id: job.id,
+        title: job.title,
+        department: job.department,
+        location: job.location,
+        salary_min: job.salary_min,
+        salary_max: job.salary_max,
+        job_type: job.job_type,
+        status: job.status,
+        description: job.description,
+        requirements: job.requirements,
+        benefits: job.benefits,
+        expires_at: job.expires_at,
+        created_at: job.created_at,
+        candidates: getJobCandidates(job.id).map(candidate => ({
+          id: candidate.id,
+          full_name: candidate.full_name,
+          email: candidate.email,
+          status: candidate.status,
+          match_score: candidate.match_score,
+          applied_at: candidate.applied_at,
+          skills: candidate.skills,
+          experience_years: candidate.experience_years
+        })),
+        timestamp: new Date().toISOString()
+      };
+
+      const response = await fetch('https://prakashgdg.app.n8n.cloud/webhook/20dccbac-63aa-4b2a-b94e-d4d6194f9a77', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(webhookData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Webhook failed: ${response.status} ${response.statusText}`);
+      }
+
+      toast({
+        title: "Analysis Started",
+        description: `Bulk analysis initiated for "${job.title}". You'll receive results shortly.`,
+      });
+
+    } catch (error) {
+      console.error('Bulk analysis error:', error);
+      toast({
+        title: "Analysis Failed",
+        description: "Failed to start bulk analysis. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setAnalyzingJobs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(job.id);
+        return newSet;
+      });
+    }
   };
 
   return (
@@ -242,6 +309,14 @@ const JobPostings = () => {
                       >
                         <Eye className="w-4 h-4 mr-2" />
                         {selectedJobForCandidates === job.id ? 'Hide' : 'View'} Applications ({getApplicationCount(job.id)})
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        onClick={() => handleBulkAnalysis(job)}
+                        disabled={analyzingJobs.has(job.id)}
+                      >
+                        <BarChart3 className="w-4 h-4 mr-2" />
+                        {analyzingJobs.has(job.id) ? 'Analyzing...' : 'Bulk Analysis'}
                       </Button>
                       <Button 
                         variant="outline"
